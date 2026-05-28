@@ -571,7 +571,7 @@ function CAGovernorForecast() {
           h(CollapsibleCard, { title: "Demographics", defaultOpen: true },
             h(SubSection, {
               title: "Support",
-              sub: "Each candidate's share within a race/ethnicity group. Each group sums to 100%."
+              sub: "Each candidate's share within a demographic group. Each group sums to 100%."
             },
               RACES.map(race => h("div", { key: race.id, className: "bracket-group" },
                 h("div", { className: "bracket-group-head" }, race.label),
