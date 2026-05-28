@@ -870,7 +870,22 @@ const RACES = [
   { id: 'other', label: 'Other / multiracial' }
 ];
 
-const TURNOUT_DEFAULT = { hisp: 30, white: 46, black: 34, asian: 36, other: 34 }; // % of registered
+const TURNOUT_DEFAULT = { hisp: 30, white: 46, black: 34, asian: 34, other: 34 }; // % of registered
+
+// Statewide registered-voter composition by race (share of all CA registered
+// voters), from the county file aggregated. Used to connect the Electorate and
+// Turnout rows: a group's electorate share = reg_share × turnout, normalized.
+const REG_SHARE_STATEWIDE = { hisp: 27.3, white: 49.0, black: 7.1, asian: 13.0, other: 3.6 };
+
+// Electorate share each race group makes up of the modeled electorate, given a
+// turnout vector. electorate_g = reg_share_g × turnout_g, normalized to 100.
+function electorateShares(turnout) {
+  const raw = {}; let tot = 0;
+  for (const r of RACES) { raw[r.id] = (REG_SHARE_STATEWIDE[r.id] || 0) * (turnout[r.id] || 0); tot += raw[r.id]; }
+  const out = {};
+  for (const r of RACES) out[r.id] = tot > 0 ? raw[r.id] / tot * 100 : 0;
+  return out;
+}
 
 const SUPPORT_DEFAULT = {
   hisp:  { becerra: 0.39, steyer: 0.11, porter: 0.10, mahan: 0.05, hilton: 0.13, bianco: 0.12, others: 0.10 },
@@ -968,6 +983,24 @@ function applyLevers(support, trumpConsolidation, demConsol) {
   return out;
 }
 
+// Levered support under the default lever positions — the reference state.
+const LEVERED_DEFAULT = applyLevers(SUPPORT_DEFAULT, TRUMP_DEFAULT, DEM_CONSOL_DEFAULT);
+
+// GOP share of the non-Other mass a county's demographics imply under the
+// DEFAULT support + turnout (the levers' reset state). Used as the reference
+// point so the partisan anchor reproduces 2024 geography at defaults and only
+// shifts when the user moves a lever away from default.
+function defaultCountyGopShare(county) {
+  let dem = 0, gop = 0;
+  for (const race of RACES) {
+    const e = county.regTotal * (county.race[race.id] / 100) * (TURNOUT_DEFAULT[race.id] / 100);
+    for (const id of DEM_IDS) dem += e * LEVERED_DEFAULT[race.id][id];
+    for (const id of GOP_IDS) gop += e * LEVERED_DEFAULT[race.id][id];
+  }
+  const non = dem + gop;
+  return non > 0 ? gop / non : 0.3;
+}
+
 function countyResult(county, support, turnout) {
   // electorate by race
   const elec = {};
@@ -982,14 +1015,27 @@ function countyResult(county, support, turnout) {
     for (const race of RACES) v += elec[race.id] * support[race.id][id];
     raw[id] = v;
   }
-  // partisan anchor — tilt Dem/GOP block masses to the county's 2024 lean
+  // partisan anchor with demographic responsiveness.
+  // Baseline: pin the county's GOP share to its 2024 lean (correct geography
+  // at default levers). Responsiveness: shift that target by how much the
+  // CURRENT demographic levers raise/lower the GOP share versus the DEFAULT
+  // levers in this county. So defaults reproduce 2024 geography exactly, and
+  // moving Support / Electorate / Turnout moves every county (and the topline).
   const gopTarget = Math.max(0.05, Math.min(0.80, 0.33 * (county.trump2024 / 39.3)));
   const demMass = DEM_IDS.reduce((s, id) => s + raw[id], 0);
   const gopMass = GOP_IDS.reduce((s, id) => s + raw[id], 0);
   const nonOther = demMass + gopMass;
+
+  // GOP share this county's demographics imply under DEFAULT levers
+  const def = defaultCountyGopShare(county);
+  // GOP share under CURRENT levers
+  const curGopShare = nonOther > 0 ? gopMass / nonOther : def;
+  const demoDelta = curGopShare - def;            // how levers shifted this county
+
   const adj = { ...raw };
   if (nonOther > 0) {
-    const gTot = nonOther * gopTarget, dTot = nonOther * (1 - gopTarget);
+    const gShare = Math.max(0.02, Math.min(0.95, gopTarget + demoDelta));
+    const gTot = nonOther * gShare, dTot = nonOther * (1 - gShare);
     if (gopMass > 0) GOP_IDS.forEach(id => { adj[id] = raw[id] * gTot / gopMass; });
     if (demMass > 0) DEM_IDS.forEach(id => { adj[id] = raw[id] * dTot / demMass; });
   }
@@ -998,32 +1044,52 @@ function countyResult(county, support, turnout) {
 }
 
 function project(counties, support, turnout, pollWeight) {
+  // Pass 1 — raw model votes per county and statewide model %.
+  const rawCounty = [];
   const totals = Object.fromEntries(ALL_IDS.map(id => [id, 0]));
   let grand = 0;
-  const perCounty = new Map();
-
   for (const county of counties) {
     const { votes, total } = countyResult(county, support, turnout);
+    rawCounty.push({ name: county.name, votes, total });
     for (const id of ALL_IDS) totals[id] += votes[id];
     grand += total;
-    const ranked = ALL_IDS.map(id => ({ id, v: votes[id] })).sort((a, b) => b.v - a.v);
-    perCounty.set(county.name, {
-      total,
+  }
+  const modelPct = Object.fromEntries(ALL_IDS.map(id => [id, grand > 0 ? totals[id] / grand * 100 : 0]));
+
+  // Blended statewide target: (1−w)·model + w·pollAverage. The blend is then
+  // expressed as a per-candidate MULTIPLIER on the model, so it can be applied
+  // inside every county — the map and the statewide bars both move together,
+  // and every lever (support / electorate / turnout / Trump / Dem) flows
+  // through because it changes modelPct, which the multiplier rides on.
+  const w = pollWeight / 100;
+  const blendedTarget = Object.fromEntries(ALL_IDS.map(id => [id, (1 - w) * modelPct[id] + w * (POLL_TOPLINE[id] || 0)]));
+  const mult = Object.fromEntries(ALL_IDS.map(id =>
+    [id, modelPct[id] > 0 ? blendedTarget[id] / modelPct[id] : (blendedTarget[id] > 0 ? 1 : 0)]));
+
+  // Pass 2 — apply the multiplier inside each county, recompute county leaders
+  // and the statewide totals from the adjusted votes.
+  const perCounty = new Map();
+  const adjTotals = Object.fromEntries(ALL_IDS.map(id => [id, 0]));
+  let adjGrand = 0;
+  for (const rc of rawCounty) {
+    const av = {};
+    let at = 0;
+    for (const id of ALL_IDS) { av[id] = rc.votes[id] * mult[id]; at += av[id]; }
+    for (const id of ALL_IDS) adjTotals[id] += av[id];
+    adjGrand += at;
+    const ranked = ALL_IDS.map(id => ({ id, v: av[id] })).sort((a, b) => b.v - a.v);
+    perCounty.set(rc.name, {
+      total: at,
       leadId: ranked[0].id,
-      pct: total > 0 ? Object.fromEntries(ALL_IDS.map(id => [id, votes[id] / total * 100])) : {},
-      margin: total > 0 ? (ranked[0].v - ranked[1].v) / total * 100 : 0
+      pct: at > 0 ? Object.fromEntries(ALL_IDS.map(id => [id, av[id] / at * 100])) : {},
+      margin: at > 0 ? (ranked[0].v - ranked[1].v) / at * 100 : 0
     });
   }
 
-  // statewide model pct, then blend toward PPIC topline
-  const modelPct = Object.fromEntries(ALL_IDS.map(id => [id, grand > 0 ? totals[id] / grand * 100 : 0]));
-  const w = pollWeight / 100;
-  const blended = Object.fromEntries(ALL_IDS.map(id => [id, (1 - w) * modelPct[id] + w * (POLL_TOPLINE[id] || 0)]));
-  const bsum = ALL_IDS.reduce((s, id) => s + blended[id], 0) || 1;
-  const pct = Object.fromEntries(ALL_IDS.map(id => [id, blended[id] / bsum * 100]));
-  const votes = Object.fromEntries(ALL_IDS.map(id => [id, Math.round(grand * pct[id] / 100)]));
+  const pct = Object.fromEntries(ALL_IDS.map(id => [id, adjGrand > 0 ? adjTotals[id] / adjGrand * 100 : 0]));
+  const votes = Object.fromEntries(ALL_IDS.map(id => [id, Math.round(adjTotals[id])]));
   const ranked = ALL_IDS.map(id => ({ id, pct: pct[id], votes: votes[id] })).sort((a, b) => b.pct - a.pct);
-  return { pct, votes, grand, ranked, perCounty };
+  return { pct, votes, grand: adjGrand, ranked, perCounty };
 }
 
 /* ──────────── DATA ──────────── */
@@ -1235,8 +1301,28 @@ function CAGovernorForecast() {
     return () => { cancelled = true; };
   }, []);
 
-  // turnout: simple per-race set (electorate share recomputed downstream)
+  // turnout: editing turnout directly recomputes electorate shares downstream.
   const setTurn = (raceId, v) => setTurnout(prev => ({ ...prev, [raceId]: Math.max(0, Math.min(100, v)) }));
+
+  // electorate: editing a group's electorate share back-solves the turnout that
+  // produces it, holding the OTHER groups' turnout fixed. Electorate and turnout
+  // are connected — moving one moves the other.
+  const setElec = (raceId, targetPct) => {
+    setTurnout(prev => {
+      const target = Math.max(0, Math.min(100, targetPct)) / 100;
+      if (target >= 1) return prev;
+      // sum of (reg_share × turnout) for the other groups stays fixed
+      let otherWeighted = 0;
+      for (const r of RACES) if (r.id !== raceId) otherWeighted += (REG_SHARE_STATEWIDE[r.id] || 0) * (prev[r.id] || 0);
+      const regSelf = REG_SHARE_STATEWIDE[raceId] || 0;
+      if (regSelf <= 0) return prev;
+      // want: selfWeighted / (selfWeighted + otherWeighted) = target
+      // selfWeighted = regSelf × turnoutSelf  ⇒ solve turnoutSelf
+      const selfWeighted = target * otherWeighted / (1 - target);
+      const turnoutSelf = Math.max(0, Math.min(100, selfWeighted / regSelf));
+      return { ...prev, [raceId]: turnoutSelf };
+    });
+  };
 
   // support: edit one candidate within a race; the other six renormalize to 1.
   const setSup = (raceId, candId, vPct) => {
@@ -1302,6 +1388,7 @@ function CAGovernorForecast() {
   const qualifiers = namedRanked.slice(0, 2).map(r => r.id);
   const leader = namedRanked[0] ? CAND_BY_ID[namedRanked[0].id] : null;
   const leadGap = ((namedRanked[0]?.pct ?? 0) - (namedRanked[1]?.pct ?? 0)).toFixed(1);
+  const elecShares = electorateShares(turnout);
 
   return h("div", { className: "vh-root" },
     h("div", { className: "vh-wrap" },
@@ -1338,8 +1425,17 @@ function CAGovernorForecast() {
                   max: 100, step: 0.5, suffix: '%', color: c.color
                 }))))),
             h(SubSection, {
+              title: "Electorate",
+              sub: "Share of the primary electorate each group makes up. Connected to turnout — moving this moves turnout, and vice versa."
+            },
+              RACES.map(race => h(SliderRow, {
+                key: race.id, label: race.label,
+                value: elecShares[race.id], onChange: v => setElec(race.id, v),
+                max: 100, step: 0.5, suffix: '%', color: 'var(--text-secondary)'
+              }))),
+            h(SubSection, {
               title: "Turnout",
-              sub: "Share of each group's registered voters who cast a primary ballot. Turnout sets each group's share of the electorate."
+              sub: "Share of each group's registered voters who cast a primary ballot. Connected to electorate above."
             },
               RACES.map(race => h(SliderRow, {
                 key: race.id, label: race.label,
