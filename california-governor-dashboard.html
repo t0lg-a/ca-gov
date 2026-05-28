@@ -40,9 +40,6 @@ body{margin:0;background:var(--bg-base);color:var(--text-primary);font-family:va
 /* ---- layout ---- */
 .vh-root{padding:28px 20px 56px;min-height:100%;}
 .vh-wrap{max-width:1480px;margin:0 auto;}
-.page-header{margin-bottom:22px;}
-.page-header h1{font-family:var(--font-head);font-weight:500;font-size:2rem;line-height:1.08;letter-spacing:-.01em;color:var(--text-primary);margin:0 0 .5rem;}
-.page-header p{font-size:.9375rem;color:var(--text-secondary);line-height:1.5;margin:0;max-width:880px;}
 .vh-grid{display:grid;grid-template-columns:1fr 400px;gap:20px;align-items:start;}
 @media(max-width:1100px){.vh-grid{grid-template-columns:1fr;}}
 .right-col{position:sticky;top:22px;height:var(--sidebar-match-height,calc(100vh - 44px));max-height:var(--sidebar-match-height,calc(100vh - 44px));overflow-y:auto;padding-right:8px;scrollbar-width:none;-ms-overflow-style:none;}
@@ -51,11 +48,14 @@ body{margin:0;background:var(--bg-base);color:var(--text-primary);font-family:va
 .right-col .vh-card{box-shadow:none;}
 @media(max-width:1200px){.right-col{position:static;height:auto;max-height:none;overflow:visible;padding-right:0;}.right-col::after{display:none;}.reset-btn{position:static;}}
 
-/* ---- results banner ---- */
-.results-banner{margin-bottom:16px;}
-.candidate-summary{display:grid;grid-template-columns:minmax(0,1fr) 204px;gap:16px;}
-@media(max-width:760px){.candidate-summary{grid-template-columns:1fr;}}
-.cand-bars{background:var(--bg-elevated);border:1px solid var(--menu-border);border-radius:16px;box-shadow:var(--card-shadow);padding:6px 20px;}
+/* ---- results bars ---- */
+.cand-bars{background:var(--bg-elevated);border:1px solid var(--menu-border);border-radius:16px;box-shadow:var(--card-shadow);padding:4px 20px 12px;margin-bottom:16px;}
+.bars-head{display:flex;align-items:center;justify-content:space-between;padding:12px 0 6px;border-bottom:1px solid var(--stroke);margin-bottom:2px;}
+.bars-cap{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);}
+.bars-toggle{display:inline-flex;align-items:center;gap:5px;background:var(--bg-surface);border:1px solid var(--menu-border);border-radius:999px;padding:3px 10px;cursor:pointer;font-family:var(--font-body);font-size:10.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--text-secondary);transition:background-color .15s ease;}
+.bars-toggle:hover{background:#e4e6ef;}
+.bars-toggle .chev{transition:transform .2s ease;}
+.bars-toggle .chev.open{transform:rotate(180deg);}
 .cand-row{display:grid;grid-template-columns:250px 1fr 66px;gap:16px;align-items:center;padding:12px 0;}
 .cand-row + .cand-row{border-top:1px solid var(--stroke);}
 .cutoff-row + .cand-row{border-top:none;}
@@ -64,30 +64,26 @@ body{margin:0;background:var(--bg-base);color:var(--text-primary);font-family:va
 .cand-text{min-width:0;}
 .cand-name{font-family:var(--font-head);font-weight:600;font-size:14px;display:flex;align-items:center;min-width:0;}
 .cand-name-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
-.party-tag{flex-shrink:0;margin-left:6px;font-size:10px;font-weight:600;background:var(--bg-surface);color:var(--accent-deep);border-radius:999px;padding:1px 7px;line-height:1.5;}
-.advances-badge{flex-shrink:0;margin-left:7px;font-size:8.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;background:var(--accent);color:#fff;border-radius:999px;padding:2px 7px;}
+.party-tag{flex-shrink:0;margin-left:7px;display:inline-flex;align-items:center;justify-content:center;min-width:17px;height:17px;padding:0 3px;font-size:10.5px;font-weight:700;color:#fff;border-radius:4px;line-height:1;}
+.party-tag.dem{background:#2563eb;}
+.party-tag.gop{background:#dc2626;}
+.advances-badge,.wins-badge{flex-shrink:0;margin-left:7px;display:inline-flex;align-items:center;height:17px;padding:0 6px;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#fff;border-radius:4px;line-height:1;}
+.advances-badge{background:var(--accent);}
+.wins-badge{background:var(--accent-deep);}
 .cand-sub{font-size:11px;color:var(--text-muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .bar-track{height:20px;background:var(--bg-surface);border-radius:999px;overflow:hidden;}
 .bar-fill{height:100%;border-radius:999px;transition:width .3s ease;}
 .cand-pct{text-align:right;font-family:var(--font-head);font-weight:600;font-size:19px;font-variant-numeric:tabular-nums;letter-spacing:-.01em;}
 .cutoff-row{display:flex;align-items:center;gap:10px;margin:1px 0;color:var(--text-muted);font-size:9.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;}
 .cutoff-row::before,.cutoff-row::after{content:"";flex:1;height:0;border-top:1px dashed var(--menu-border);}
-
-/* ---- leader card ---- */
-.margin-summary{background:var(--bg-elevated);border:1px solid var(--menu-border);border-radius:16px;box-shadow:var(--card-shadow);display:flex;flex-direction:column;align-items:center;justify-content:space-between;text-align:center;padding:22px 16px;gap:12px;}
-.ms-head{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);}
-.ms-cand{display:flex;flex-direction:column;align-items:center;gap:7px;}
-.ms-avatar{width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid #fff;box-shadow:0 0 0 1px var(--stroke);}
-.ms-name{font-size:12px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;line-height:1.15;}
-.ms-pct{font-family:var(--font-head);font-size:26px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.02em;line-height:1;}
-.ms-rule{position:relative;width:100%;display:flex;align-items:center;justify-content:center;}
-.ms-rule::before{content:"";position:absolute;top:50%;left:0;right:0;border-top:1px dashed var(--menu-border);}
-.ms-rule span{position:relative;background:var(--bg-elevated);padding:0 9px;font-size:9.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);}
+.bars-note{margin-top:10px;padding:9px 12px;background:var(--bg-surface);border-radius:10px;font-size:11.5px;color:var(--text-secondary);line-height:1.45;}
+.bars-note b{font-weight:700;}
 
 /* ---- map ---- */
 .map-card{background:var(--bg-elevated);border-radius:16px;box-shadow:var(--card-shadow);padding:14px 16px 12px;}
+.left-col > :last-child{margin-bottom:0;}
 .map-caption{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);margin:0 0 8px 2px;}
-.tx-map{width:100%;height:560px;border-radius:12px;overflow:hidden;}
+.tx-map{width:100%;height:640px;border-radius:12px;overflow:hidden;}
 .map-legend{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:12px;padding-top:12px;border-top:1px solid var(--stroke);}
 .legend-item{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--text-secondary);}
 .legend-swatch{width:11px;height:11px;border-radius:3px;flex-shrink:0;}
@@ -138,7 +134,7 @@ body{margin:0;background:var(--bg-base);color:var(--text-primary);font-family:va
 
 /* MapLibre nav control on-brand */
 .maplibregl-ctrl-group{border-radius:10px!important;box-shadow:var(--card-shadow)!important;overflow:hidden;}
-@media(max-width:760px){.vh-root{padding:20px 14px 48px;}.cand-row{grid-template-columns:1fr auto;gap:7px 12px;}.cand-name-block{grid-column:1;grid-row:1;}.cand-pct{grid-column:2;grid-row:1;font-size:17px;}.bar-track{grid-column:1 / -1;grid-row:2;}.tx-map{height:440px;}.page-header h1{font-size:1.875rem;}}
+@media(max-width:760px){.vh-root{padding:20px 14px 48px;}.cand-row{grid-template-columns:1fr auto;gap:7px 12px;}.cand-name-block{grid-column:1;grid-row:1;}.cand-pct{grid-column:2;grid-row:1;font-size:17px;}.bar-track{grid-column:1 / -1;grid-row:2;}.tx-map{height:460px;}}
 
   </style>
 </head>
@@ -365,7 +361,7 @@ function CaliforniaMap({ geojson, countyResults }) {
         const res = resultsRef.current?.get(name);
         const lines = [`<div class="tx-popup-title">${name} County</div>`];
         if (res && res.total > 0) {
-          lines.push(`<div class="tx-popup-head"><span>CANDIDATE</span><span>EST. SHARE</span></div>`);
+          lines.push(`<div class="tx-popup-head"><span>CANDIDATE</span><span>SHARE</span></div>`);
           ALL_IDS.map(id => ({ c: CAND_BY_ID[id], pct: res.pct[id] || 0 }))
             .sort((a, b) => b.pct - a.pct).slice(0, 5)
             .forEach(row => lines.push(
@@ -437,7 +433,7 @@ function candPhoto(id) {
   return assetUrl(`photos/${id}.jpg`);
 }
 
-function CandRow({ cand, pct, qualifies }) {
+function CandRow({ cand, pct, status }) {
   const avatar = h("img", { className: "cand-avatar", src: candPhoto(cand.id), alt: cand.name, loading: "lazy",
     onError: e => { e.target.style.visibility = 'hidden'; } });
   return h("div", { className: "cand-row" },
@@ -446,8 +442,9 @@ function CandRow({ cand, pct, qualifies }) {
       h("div", { className: "cand-text" },
         h("div", { className: "cand-name", style: { color: cand.color } },
           h("span", { className: "cand-name-text" }, cand.name),
-          h("span", { className: "party-tag" }, cand.party),
-          qualifies && h("span", { className: "advances-badge" }, "Advances")),
+          h("span", { className: `party-tag ${cand.party === 'R' ? 'gop' : 'dem'}` }, cand.party),
+          status === 'wins' && h("span", { className: "wins-badge" }, "Wins"),
+          status === 'advances' && h("span", { className: "advances-badge" }, "Advances")),
         h("div", { className: "cand-sub" }, cand.sub))),
     h("div", { className: "bar-track" }, h("div", { className: "bar-fill", style: { width: `${Math.min(100, pct)}%`, background: cand.color } })),
     h("div", { className: "cand-pct", style: { color: cand.color } }, `${pct.toFixed(1)}%`));
@@ -460,6 +457,7 @@ function CAGovernorForecast() {
 
   const [support, setSupport] = useState(SUPPORT_DEFAULT);
   const [mapData, setMapData] = useState(null);
+  const [barsMin, setBarsMin] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -519,10 +517,13 @@ function CAGovernorForecast() {
 
   const ranked = result?.ranked || [];
   const namedRanked = ranked.filter(r => r.id !== 'others');
-  const qualifiers = namedRanked.slice(0, 2).map(r => r.id);
-  const leader = namedRanked[0] ? CAND_BY_ID[namedRanked[0].id] : null;
-  const runner = namedRanked[1] ? CAND_BY_ID[namedRanked[1].id] : null;
-  const leadGap = ((namedRanked[0]?.pct ?? 0) - (namedRanked[1]?.pct ?? 0)).toFixed(1);
+  const majorityWinner = namedRanked[0] && namedRanked[0].pct > 50 ? namedRanked[0] : null;
+  const advancing = majorityWinner ? namedRanked.slice(0, 1) : namedRanked.slice(0, 2);
+  const advancingIds = advancing.map(r => r.id);
+  const rowStatus = id => majorityWinner
+    ? (id === majorityWinner.id ? 'wins' : null)
+    : (advancingIds.includes(id) ? 'advances' : null);
+  const shownRows = barsMin ? advancing : namedRanked;
 
   const leaderCounts = {};
   if (result?.perCounty) for (const v of result.perCounty.values()) leaderCounts[v.leadId] = (leaderCounts[v.leadId] || 0) + 1;
@@ -530,31 +531,25 @@ function CAGovernorForecast() {
 
   return h("div", { className: "vh-root" },
     h("div", { className: "vh-wrap" },
-      h("div", { className: "page-header" },
-        h("h1", null, "Build Your Own California Gubernatorial Jungle Primary"),
-        h("p", null, "California's top-two (jungle) gubernatorial primary, June 2, 2026. Set each demographic group's candidate support; the county map and statewide bars update live. The top two finishers advance to the November general election — regardless of margin.")),
       h("div", { className: "vh-grid" },
 
         /* ── LEFT COLUMN ── */
         h("div", { ref: leftColRef, className: "left-col" },
-          h("div", { className: "results-banner" },
-            h("div", { className: "candidate-summary" },
-              h("div", { className: "cand-bars" },
-                ranked.flatMap((r, i) => {
-                  const row = h(CandRow, { key: r.id, cand: CAND_BY_ID[r.id], pct: r.pct, qualifies: qualifiers.includes(r.id) });
-                  return i === 1 ? [row, h("div", { key: "cutoff", className: "cutoff-row" }, h("span", null, "top-two cutoff"))] : [row];
-                })),
-              h("div", { className: "margin-summary" },
-                h("div", { className: "ms-head" }, "Advancing to November"),
-                leader && h("div", { className: "ms-cand" },
-                  h("img", { className: "ms-avatar", src: candPhoto(leader.id), alt: leader.name, onError: e => { e.target.style.visibility = 'hidden'; } }),
-                  h("div", { className: `ms-name ${leader.cls}` }, leader.name),
-                  h("div", { className: `ms-pct ${leader.cls}` }, `${(namedRanked[0]?.pct ?? 0).toFixed(1)}%`)),
-                (leader && runner) && h("div", { className: "ms-rule" }, h("span", null, `+${leadGap} pt lead`)),
-                runner && h("div", { className: "ms-cand" },
-                  h("img", { className: "ms-avatar", src: candPhoto(runner.id), alt: runner.name, onError: e => { e.target.style.visibility = 'hidden'; } }),
-                  h("div", { className: `ms-name ${runner.cls}` }, runner.name),
-                  h("div", { className: `ms-pct ${runner.cls}` }, `${(namedRanked[1]?.pct ?? 0).toFixed(1)}%`))))),
+          h("div", { className: "cand-bars" },
+            h("div", { className: "bars-head" },
+              h("div", { className: "bars-cap" }, majorityWinner ? "Projected result — majority" : "Projected result"),
+              h("button", { className: "bars-toggle", onClick: () => setBarsMin(m => !m), "aria-expanded": !barsMin, title: barsMin ? "Show all candidates" : "Show top two only" },
+                h("span", null, barsMin ? "Show all" : "Top two"),
+                h("svg", { className: `chev ${barsMin ? '' : 'open'}`, width: 14, height: 14, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2.4 }, h("path", { d: "M6 9l6 6 6-6" })))),
+            shownRows.flatMap((r, i) => {
+              const row = h(CandRow, { key: r.id, cand: CAND_BY_ID[r.id], pct: r.pct, status: rowStatus(r.id) });
+              return (!barsMin && !majorityWinner && i === 1)
+                ? [row, h("div", { key: "cutoff", className: "cutoff-row" }, h("span", null, "top-two cutoff"))]
+                : [row];
+            }),
+            majorityWinner && h("div", { className: "bars-note" },
+              h("b", { className: majorityWinner.id }, CAND_BY_ID[majorityWinner.id].name.split(' ').slice(-1)[0]),
+              ` clears 50% — elected outright; no November general.`)),
           h("div", { className: "vh-card map-card" },
             h("div", { className: "map-caption" }, "Leading candidate by county"),
             h(CaliforniaMap, { geojson: mapData?.geojson, countyResults: result?.perCounty }),
@@ -571,7 +566,7 @@ function CAGovernorForecast() {
           h(CollapsibleCard, { title: "Demographics", defaultOpen: true },
             h(SubSection, {
               title: "Support",
-              sub: "Each candidate's share within a demographic group. Each group sums to 100%."
+              sub: "Each candidate's share within a race/ethnicity group. Each group sums to 100%."
             },
               RACES.map(race => h("div", { key: race.id, className: "bracket-group" },
                 h("div", { className: "bracket-group-head" }, race.label),
