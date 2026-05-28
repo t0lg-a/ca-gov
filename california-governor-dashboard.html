@@ -74,13 +74,15 @@ body{margin:0;background:var(--bg-base);color:var(--text-primary);font-family:va
 .cutoff-row::before,.cutoff-row::after{content:"";flex:1;height:0;border-top:1px dashed var(--menu-border);}
 
 /* ---- leader card ---- */
-.margin-summary{background:var(--bg-elevated);border:1px solid var(--menu-border);border-radius:16px;box-shadow:var(--card-shadow);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px 16px;gap:8px;}
-.margin-summary-avatar{width:52px;height:52px;border-radius:50%;object-fit:cover;border:2px solid #fff;box-shadow:0 0 0 1px var(--stroke);}
-.margin-summary-label{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);}
-.margin-summary-name{font-size:11.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;line-height:1.15;}
-.margin-summary-value{font-family:var(--font-head);font-size:32px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.02em;line-height:1;}
-.margin-summary-value .mvu{font-size:13px;font-weight:600;opacity:.65;margin-left:3px;letter-spacing:0;}
-.margin-summary-sub{font-size:10.5px;color:var(--text-muted);font-weight:600;}
+.margin-summary{background:var(--bg-elevated);border:1px solid var(--menu-border);border-radius:16px;box-shadow:var(--card-shadow);display:flex;flex-direction:column;align-items:center;justify-content:space-between;text-align:center;padding:22px 16px;gap:12px;}
+.ms-head{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);}
+.ms-cand{display:flex;flex-direction:column;align-items:center;gap:7px;}
+.ms-avatar{width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid #fff;box-shadow:0 0 0 1px var(--stroke);}
+.ms-name{font-size:12px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;line-height:1.15;}
+.ms-pct{font-family:var(--font-head);font-size:26px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.02em;line-height:1;}
+.ms-rule{position:relative;width:100%;display:flex;align-items:center;justify-content:center;}
+.ms-rule::before{content:"";position:absolute;top:50%;left:0;right:0;border-top:1px dashed var(--menu-border);}
+.ms-rule span{position:relative;background:var(--bg-elevated);padding:0 9px;font-size:9.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);}
 
 /* ---- map ---- */
 .map-card{background:var(--bg-elevated);border-radius:16px;box-shadow:var(--card-shadow);padding:14px 16px 12px;}
@@ -136,7 +138,7 @@ body{margin:0;background:var(--bg-base);color:var(--text-primary);font-family:va
 
 /* MapLibre nav control on-brand */
 .maplibregl-ctrl-group{border-radius:10px!important;box-shadow:var(--card-shadow)!important;overflow:hidden;}
-@media(max-width:760px){.tx-map{height:440px;}.page-header h1{font-size:1.875rem;}}
+@media(max-width:760px){.vh-root{padding:20px 14px 48px;}.cand-row{grid-template-columns:1fr auto;gap:7px 12px;}.cand-name-block{grid-column:1;grid-row:1;}.cand-pct{grid-column:2;grid-row:1;font-size:17px;}.bar-track{grid-column:1 / -1;grid-row:2;}.tx-map{height:440px;}.page-header h1{font-size:1.875rem;}}
 
   </style>
 </head>
@@ -543,11 +545,16 @@ function CAGovernorForecast() {
                   return i === 1 ? [row, h("div", { key: "cutoff", className: "cutoff-row" }, h("span", null, "top-two cutoff"))] : [row];
                 })),
               h("div", { className: "margin-summary" },
-                h("div", { className: "margin-summary-label" }, "Projected leader"),
-                leader && h("img", { className: "margin-summary-avatar", src: candPhoto(leader.id), alt: leader.name, onError: e => { e.target.style.visibility = 'hidden'; } }),
-                h("div", { className: `margin-summary-name ${leader ? leader.cls : ''}` }, leader ? leader.name : '—'),
-                h("div", { className: `margin-summary-value ${leader ? leader.cls : ''}` }, leader ? `+${leadGap}` : '—', leader && h("span", { className: "mvu" }, "pts")),
-                runner && h("div", { className: "margin-summary-sub" }, `over ${runner.name.split(' ').slice(-1)[0]}`)))),
+                h("div", { className: "ms-head" }, "Advancing to November"),
+                leader && h("div", { className: "ms-cand" },
+                  h("img", { className: "ms-avatar", src: candPhoto(leader.id), alt: leader.name, onError: e => { e.target.style.visibility = 'hidden'; } }),
+                  h("div", { className: `ms-name ${leader.cls}` }, leader.name),
+                  h("div", { className: `ms-pct ${leader.cls}` }, `${(namedRanked[0]?.pct ?? 0).toFixed(1)}%`)),
+                (leader && runner) && h("div", { className: "ms-rule" }, h("span", null, `+${leadGap} pt lead`)),
+                runner && h("div", { className: "ms-cand" },
+                  h("img", { className: "ms-avatar", src: candPhoto(runner.id), alt: runner.name, onError: e => { e.target.style.visibility = 'hidden'; } }),
+                  h("div", { className: `ms-name ${runner.cls}` }, runner.name),
+                  h("div", { className: `ms-pct ${runner.cls}` }, `${(namedRanked[1]?.pct ?? 0).toFixed(1)}%`))))),
           h("div", { className: "vh-card map-card" },
             h("div", { className: "map-caption" }, "Leading candidate by county"),
             h(CaliforniaMap, { geojson: mapData?.geojson, countyResults: result?.perCounty }),
