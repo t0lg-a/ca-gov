@@ -1,0 +1,59 @@
+county,trump_2024_pct,total_2024,reg_dem_pct,reg_rep_pct,reg_npp_pct,place_type,edu_bachelor_plus_pct,hh_100k_plus_pct,hispanic_pct
+Alameda,25.6,760,56,11,27,Urban,51,55,22
+Alpine,42.0,0.8,38,28,28,Rural,33,40,11
+Amador,62.5,22,28,44,22,Rural,22,33,14
+Butte,54.0,105,31,38,25,Exurb,27,28,18
+Calaveras,62.0,28,27,43,24,Rural,25,31,13
+Colusa,60.5,8,33,38,23,Rural,16,30,60
+Contra Costa,33.5,580,49,19,27,Suburb,44,56,27
+Del Norte,56.0,11,32,35,26,Rural,16,24,22
+El Dorado,56.5,115,28,41,25,Exurb,38,47,14
+Fresno,50.5,350,39,35,21,Urban,23,30,54
+Glenn,66.0,11,28,44,22,Rural,16,28,41
+Humboldt,38.5,65,41,24,29,Rural,30,26,13
+Imperial,44.0,48,49,24,22,Rural,15,26,86
+Inyo,54.0,9,30,38,26,Rural,27,30,24
+Kern,59.0,270,35,39,20,Exurb,18,32,56
+Kings,60.0,42,35,38,21,Rural,16,30,57
+Lake,52.0,30,38,31,25,Rural,18,22,22
+Lassen,73.0,11,24,47,24,Rural,14,30,19
+Los Angeles,33.0,3500,50,18,26,Urban,35,41,49
+Madera,60.0,55,34,39,20,Exurb,17,30,60
+Marin,24.0,160,54,14,27,Suburb,60,64,16
+Mariposa,60.0,11,29,41,24,Rural,26,28,14
+Mendocino,38.0,45,44,24,27,Rural,27,25,27
+Merced,53.5,95,42,32,20,Exurb,15,26,63
+Modoc,76.0,5,23,49,23,Rural,16,23,19
+Mono,48.0,7,33,33,28,Rural,33,35,30
+Monterey,37.0,160,47,24,24,Suburb,28,33,60
+Napa,33.0,75,47,22,26,Suburb,37,49,35
+Nevada,50.5,65,34,35,26,Exurb,38,36,11
+Orange,44.0,1450,36,33,26,Suburb,42,50,35
+Placer,55.0,230,27,42,24,Suburb,40,52,16
+Plumas,64.0,12,28,42,24,Rural,24,28,11
+Riverside,50.5,1000,39,33,22,Suburb,24,39,51
+Sacramento,40.5,680,44,27,23,Urban,33,42,25
+San Benito,46.0,28,42,28,24,Exurb,22,44,62
+San Bernardino,51.5,740,40,31,23,Suburb,22,36,56
+San Diego,40.0,1450,40,28,26,Urban,40,47,35
+San Francisco,15.0,460,60,6,28,Urban,60,53,15
+San Joaquin,48.5,290,43,31,21,Suburb,22,37,45
+San Luis Obispo,47.0,155,35,35,26,Suburb,36,39,24
+San Mateo,25.0,370,53,14,28,Suburb,51,64,24
+Santa Barbara,37.0,185,43,26,26,Suburb,36,39,47
+Santa Clara,27.0,800,47,16,31,Urban,53,65,25
+Santa Cruz,26.0,145,54,16,26,Suburb,44,44,36
+Shasta,69.0,90,24,47,24,Exurb,22,28,11
+Sierra,62.0,2,28,41,25,Rural,24,28,12
+Siskiyou,62.0,23,29,41,24,Rural,23,22,14
+Solano,42.0,195,46,26,23,Suburb,28,49,28
+Sonoma,29.0,255,50,18,26,Suburb,40,47,28
+Stanislaus,52.0,200,39,34,21,Suburb,19,32,49
+Sutter,60.0,38,32,41,21,Exurb,21,34,33
+Tehama,69.0,27,25,46,24,Rural,15,24,27
+Trinity,55.0,6,33,35,26,Rural,22,19,11
+Tulare,58.0,130,35,38,20,Exurb,16,27,67
+Tuolumne,60.0,30,29,41,24,Rural,24,30,13
+Ventura,44.0,410,39,31,25,Suburb,34,50,45
+Yolo,31.0,105,47,21,26,Suburb,42,41,33
+Yuba,60.0,30,31,40,22,Exurb,17,30,32
