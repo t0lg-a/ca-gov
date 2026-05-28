@@ -367,7 +367,7 @@ function CaliforniaMap({ geojson, countyResults }) {
             .forEach(row => lines.push(
               `<div class="tx-popup-row"><span class="tx-popup-name ${row.c.cls}">${row.c.name}</span><b class="${row.c.cls}">${row.pct.toFixed(1)}%</b></div>`));
           const lead = CAND_BY_ID[res.leadId];
-          lines.push(`<div class="tx-popup-row tx-popup-margin"><span>LEADS:</span><b class="${lead.cls}">${lead.name.split(' ').slice(-1)[0]} +${res.margin.toFixed(1)}</b></div>`);
+          lines.push(`<div class="tx-popup-row tx-popup-margin"><span>MARGIN</span><b class="${lead.cls}">${lead.name.split(' ').slice(-1)[0]} +${res.margin.toFixed(1)}</b></div>`);
         } else lines.push(`<div class="tx-popup-row"><span>No data</span></div>`);
         popup.setLngLat(e.lngLat).setHTML(lines.join("")).addTo(map);
       };
