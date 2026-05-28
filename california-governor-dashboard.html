@@ -43,6 +43,9 @@ body{margin:0;background:var(--bg-base);color:var(--text-primary);font-family:va
 .vh-grid{display:grid;grid-template-columns:1fr 400px;gap:20px;align-items:start;}
 @media(max-width:1100px){.vh-grid{grid-template-columns:1fr;}}
 .right-col{position:sticky;top:22px;height:var(--sidebar-match-height,calc(100vh - 44px));max-height:var(--sidebar-match-height,calc(100vh - 44px));overflow-y:auto;padding-right:8px;scrollbar-width:none;-ms-overflow-style:none;}
+.demo-header{margin:2px 2px 14px;}
+.demo-title{font-family:var(--font-head);font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--text-secondary);}
+.demo-sub{font-size:11px;color:var(--text-muted);line-height:1.45;margin-top:5px;}
 .right-col::-webkit-scrollbar{display:none;}
 .right-col::after{content:"";display:block;height:18px;pointer-events:none;position:sticky;z-index:3;bottom:0;margin-top:-18px;background:linear-gradient(to top,var(--bg-base),rgba(248,249,252,0));}
 .right-col .vh-card{box-shadow:none;}
@@ -50,7 +53,7 @@ body{margin:0;background:var(--bg-base);color:var(--text-primary);font-family:va
 
 /* ---- results bars ---- */
 .cand-bars{background:var(--bg-elevated);border:1px solid var(--menu-border);border-radius:16px;box-shadow:var(--card-shadow);padding:4px 20px 12px;margin-bottom:16px;}
-.bars-head{display:flex;align-items:center;justify-content:space-between;padding:12px 0 6px;border-bottom:1px solid var(--stroke);margin-bottom:2px;}
+.bars-head{display:flex;align-items:center;justify-content:flex-end;padding:12px 0 6px;border-bottom:1px solid var(--stroke);margin-bottom:2px;}
 .bars-cap{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);}
 .bars-toggle{display:inline-flex;align-items:center;gap:5px;background:var(--bg-surface);border:1px solid var(--menu-border);border-radius:999px;padding:3px 10px;cursor:pointer;font-family:var(--font-body);font-size:10.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--text-secondary);transition:background-color .15s ease;}
 .bars-toggle:hover{background:#e4e6ef;}
@@ -537,7 +540,6 @@ function CAGovernorForecast() {
         h("div", { ref: leftColRef, className: "left-col" },
           h("div", { className: "cand-bars" },
             h("div", { className: "bars-head" },
-              h("div", { className: "bars-cap" }, majorityWinner ? "Projected result — majority" : "Projected result"),
               h("button", { className: "bars-toggle", onClick: () => setBarsMin(m => !m), "aria-expanded": !barsMin, title: barsMin ? "Show all candidates" : "Show top two only" },
                 h("span", null, barsMin ? "Show all" : "Top two"),
                 h("svg", { className: `chev ${barsMin ? '' : 'open'}`, width: 14, height: 14, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2.4 }, h("path", { d: "M6 9l6 6 6-6" })))),
@@ -559,23 +561,19 @@ function CAGovernorForecast() {
                 h("span", { className: "legend-name" }, CAND_BY_ID[x.id].name.split(' ').slice(-1)[0]),
                 h("span", { className: "legend-count" }, x.n)))))),
 
-        /* ── RIGHT COLUMN — cards follow the strategy list ── */
+        /* ── RIGHT COLUMN — demographics, one card per race/ethnicity group ── */
         h("div", { ref: rightColRef, className: "right-col" },
+          h("div", { className: "demo-header" },
+            h("div", { className: "demo-title" }, "Demographics"),
+            h("div", { className: "demo-sub" }, "Each candidate's share within a race/ethnicity group. Each group sums to 100%.")),
 
-          // Demographics — candidate support within each race/ethnicity group
-          h(CollapsibleCard, { title: "Demographics", defaultOpen: true },
-            h(SubSection, {
-              title: "Support",
-              sub: "Each candidate's share within a race/ethnicity group. Each group sums to 100%."
-            },
-              RACES.map(race => h("div", { key: race.id, className: "bracket-group" },
-                h("div", { className: "bracket-group-head" }, race.label),
-                NAMED.map(c => h(SliderRow, {
-                  key: c.id, label: c.name,
-                  value: support[race.id][c.id] * 100,
-                  onChange: v => setSup(race.id, c.id, v),
-                  max: 100, step: 0.5, suffix: '%', color: c.color
-                })))))),
+          RACES.map(race => h(CollapsibleCard, { key: race.id, title: race.label, defaultOpen: true },
+            NAMED.map(c => h(SliderRow, {
+              key: c.id, label: c.name,
+              value: support[race.id][c.id] * 100,
+              onChange: v => setSup(race.id, c.id, v),
+              max: 100, step: 0.5, suffix: '%', color: c.color
+            })))),
 
           h("button", { className: "reset-btn", onClick: resetAll }, "Reset All Levers")))));
 }
