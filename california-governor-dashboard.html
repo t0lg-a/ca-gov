@@ -316,38 +316,58 @@ function popupHTML(name, res) {
   return lines.join("");
 }
 
+/* Latitude-corrected planar geometry: scales longitude by cos(mean latitude) so the
+   map isn't horizontally stretched, while staying on geoIdentity (no spherical
+   projection → winding-safe). Equivalent to an equirectangular standard parallel. */
+function latCorrectedGeojson(geojson) {
+  if (!geojson?.features?.length) return geojson;
+  let minLat = Infinity, maxLat = -Infinity;
+  const scanLat = c => {
+    if (typeof c[0] === "number") { if (c[1] < minLat) minLat = c[1]; if (c[1] > maxLat) maxLat = c[1]; }
+    else for (const k of c) scanLat(k);
+  };
+  for (const f of geojson.features) scanLat(f.geometry.coordinates);
+  const k = Math.cos(((minLat + maxLat) / 2) * Math.PI / 180);
+  const mapCoords = c => (typeof c[0] === "number") ? [c[0] * k, c[1]] : c.map(mapCoords);
+  return {
+    ...geojson,
+    features: geojson.features.map(f => ({ ...f, geometry: { ...f.geometry, coordinates: mapCoords(f.geometry.coordinates) } }))
+  };
+}
+
 function CaliforniaMap({ geojson, countyResults }) {
   const containerRef = useRef(null);
   const svgRef = useRef(null);
   const tipRef = useRef(null);
   const resultsRef = useRef(countyResults);
   resultsRef.current = countyResults;
+  const geo = useMemo(() => latCorrectedGeojson(geojson), [geojson]);
 
   // build / rebuild paths when geojson or size changes
   useEffect(() => {
     const container = containerRef.current;
-    if (!container || !geojson || typeof d3 === "undefined") return;
+    if (!container || !geo || typeof d3 === "undefined") return;
 
     const render = () => {
       const w = container.clientWidth;
       if (!w) return;
       const pad = 8;
       // size the map to California's true aspect ratio so it fills the box (no empty bands)
-      const fit = d3.geoIdentity().reflectY(true).fitWidth(w - pad * 2, geojson);
-      const [[, y0], [, y1]] = d3.geoPath(fit).bounds(geojson);
+      const fit = d3.geoIdentity().reflectY(true).fitWidth(w - pad * 2, geo);
+      const [[, y0], [, y1]] = d3.geoPath(fit).bounds(geo);
       const hgt = Math.ceil(y1 + pad);
       container.style.height = hgt + "px";
 
       const svg = d3.select(svgRef.current).attr("viewBox", `0 0 ${w} ${hgt}`).attr("width", w).attr("height", hgt);
       svg.selectAll("*").remove();
 
-      const projection = d3.geoIdentity().reflectY(true).fitExtent([[pad, pad], [w - pad, hgt - pad]], geojson);
+      const projection = d3.geoIdentity().reflectY(true).fitExtent([[pad, pad], [w - pad, hgt - pad]], geo);
       const path = d3.geoPath(projection);
 
       const tip = d3.select(tipRef.current);
       const g = svg.append("g");
       g.selectAll("path")
-        .data(geojson.features)
+        .data(geo.features)
         .join("path")
         .attr("d", path)
         .attr("fill", ft => { const r = resultsRef.current?.get(ft.properties?.name); return r ? (HEX[r.leadId] || "#d4d4d8") : "#e3e3ea"; })
@@ -384,7 +404,7 @@ function CaliforniaMap({ geojson, countyResults }) {
     const ro = new ResizeObserver(render);
     ro.observe(container);
     return () => ro.disconnect();
-  }, [geojson]);
+  }, [geo]);
 
   // recolor in place when results change (no full rebuild)
   useEffect(() => {
