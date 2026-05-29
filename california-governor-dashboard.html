@@ -5,10 +5,9 @@
   <meta charset="utf-8">
   <title>California Governor — Build Your Own Jungle Primary</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
   <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.development.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"></script>
-  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <script src="https://unpkg.com/d3@7.9.0/dist/d3.min.js"></script>
   <style>
 /* California Governor dashboard — VoteHub design system
    Typography: TT Norms Pro (headings, embedded) + Avenir Next (body, system). */
@@ -24,8 +23,8 @@
   --menu-shadow:0 22px 48px rgba(53,28,113,.16);
   --font-head:"TT Norms Pro","Avenir Next",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   --font-body:"Avenir Next",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-  --becerra-strong:#7c3aed; --steyer-strong:#2980b9; --porter-strong:#16a085;
-  --mahan-strong:#27ae60; --hilton-strong:#c0392b; --bianco-strong:#e67e22;
+  --becerra-strong:#2980b9; --steyer-strong:#7c3aed; --porter-strong:#16a085;
+  --mahan-strong:#f1c40f; --hilton-strong:#c0392b; --bianco-strong:#e67e22;
 }
 *,*::before,*::after{box-sizing:border-box;}
 html{font-size:16px;}
@@ -86,7 +85,9 @@ body{margin:0;background:var(--bg-base);color:var(--text-primary);font-family:va
 .map-card{background:var(--bg-elevated);border-radius:16px;box-shadow:var(--card-shadow);padding:14px 16px 12px;}
 .left-col > :last-child{margin-bottom:0;}
 .map-caption{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);margin:0 0 8px 2px;}
-.tx-map{width:100%;height:640px;border-radius:12px;overflow:hidden;}
+.tx-map{position:relative;width:100%;min-height:300px;border-radius:12px;overflow:hidden;background:var(--bg-surface);}
+.tx-map-svg{display:block;width:100%;height:100%;}
+.tx-popup-floating{position:absolute;z-index:5;pointer-events:none;opacity:0;transition:opacity .12s ease;background:var(--bg-elevated);border:1px solid var(--menu-border);border-radius:10px;box-shadow:var(--menu-shadow);padding:.65rem .85rem;min-width:188px;max-width:210px;}
 .map-legend{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:12px;padding-top:12px;border-top:1px solid var(--stroke);}
 .legend-item{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--text-secondary);}
 .legend-swatch{width:11px;height:11px;border-radius:3px;flex-shrink:0;}
@@ -94,8 +95,6 @@ body{margin:0;background:var(--bg-base);color:var(--text-primary);font-family:va
 .legend-count{font-variant-numeric:tabular-nums;color:var(--text-muted);font-weight:600;background:var(--bg-surface);border-radius:999px;padding:0 7px;font-size:10.5px;}
 
 /* MapLibre popup -> tooltip spec */
-.tx-popup .maplibregl-popup-content{background:var(--bg-elevated);border:1px solid var(--menu-border);border-radius:10px;box-shadow:var(--menu-shadow);padding:.65rem .85rem;font-family:var(--font-body);}
-.tx-popup .maplibregl-popup-tip{display:none;}
 .tx-popup-title{font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid var(--stroke);}
 .tx-popup-head{display:flex;justify-content:space-between;font-size:9px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px;}
 .tx-popup-row{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:12px;color:var(--text-secondary);padding:2.5px 0;font-variant-numeric:tabular-nums;}
@@ -136,8 +135,7 @@ body{margin:0;background:var(--bg-base);color:var(--text-primary);font-family:va
 .error-pane{padding:20px;margin:20px;font-family:ui-monospace,Menlo,monospace;font-size:12px;white-space:pre-wrap;color:#dc2626;background:#fef2f2;border:1px solid #fecaca;border-radius:12px;}
 
 /* MapLibre nav control on-brand */
-.maplibregl-ctrl-group{border-radius:10px!important;box-shadow:var(--card-shadow)!important;overflow:hidden;}
-@media(max-width:760px){.vh-root{padding:20px 14px 48px;}.cand-row{grid-template-columns:1fr auto;gap:7px 12px;}.cand-name-block{grid-column:1;grid-row:1;}.cand-pct{grid-column:2;grid-row:1;font-size:17px;}.bar-track{grid-column:1 / -1;grid-row:2;}.tx-map{height:460px;}}
+@media(max-width:760px){.vh-root{padding:20px 14px 48px;}.cand-row{grid-template-columns:1fr auto;gap:7px 12px;}.cand-name-block{grid-column:1;grid-row:1;}.cand-pct{grid-column:2;grid-row:1;font-size:17px;}.bar-track{grid-column:1 / -1;grid-row:2;}}
 
   </style>
 </head>
@@ -167,13 +165,6 @@ const ASSET_BASE_URL = APP_SCRIPT?.src
 
 function assetUrl(filename) { return new URL(filename, ASSET_BASE_URL).href; }
 
-/* ──────────── ARCGIS BASEMAP ──────────── */
-const ARCGIS_TILE_URL = "https://basemaps.arcgis.com/arcgis/rest/services/World_Basemap_v2/VectorTileServer/tile/{z}/{y}/{x}.pbf";
-const ARCGIS_GLYPHS_URL = "https://basemaps.arcgis.com/arcgis/rest/services/World_Basemap_v2/VectorTileServer/resources/fonts/{fontstack}/{range}.pbf";
-const ARCGIS_HG_BASE_STYLE = "https://www.arcgis.com/sharing/rest/content/items/2afe5b807fa74006be6363fd243ffb30/resources/styles/root.json";
-const ARCGIS_HG_DETAIL_STYLE = "https://www.arcgis.com/sharing/rest/content/items/97fa1365da1e43eabb90d0364326bc2d/resources/styles/root.json";
-const ARCGIS_HG_LABEL_STYLE = "https://www.arcgis.com/sharing/rest/content/items/ba52238d338745b1a355407ec9df6768/resources/styles/root.json";
-
 /* ──────────── CANDIDATES ──────────── */
 const CANDIDATES = [
   { id: 'becerra', cls: 'becerra', name: 'Xavier Becerra', party: 'D', sub: 'Former HHS Secretary',     color: 'var(--becerra-strong)' },
@@ -184,7 +175,7 @@ const CANDIDATES = [
   { id: 'bianco',  cls: 'bianco',  name: 'Chad Bianco',    party: 'R', sub: 'Riverside County Sheriff',   color: 'var(--bianco-strong)' }
 ];
 const HEX = {
-  becerra: '#7c3aed', steyer: '#2980b9', porter: '#16a085', mahan: '#27ae60',
+  becerra: '#2980b9', steyer: '#7c3aed', porter: '#16a085', mahan: '#f1c40f',
   hilton: '#c0392b', bianco: '#e67e22', others: '#7f8c8d'
 };
 const CAND_BY_ID = Object.fromEntries(CANDIDATES.map(c => [c.id, c]));
@@ -310,94 +301,101 @@ function buildCounties(rows) {
   }));
 }
 
-/* ──────────── MAP ──────────── */
-function buildLeaderFillExpression() {
-  const match = ["match", ["coalesce", ["feature-state", "lead_id"], "none"]];
-  for (const c of CANDIDATES) match.push(c.id, HEX[c.id]);
-  match.push("#d4d4d8");
-  return match;
+/* ──────────── MAP (basemap-less D3 choropleth, VoteHub house style) ──────────── */
+function popupHTML(name, res) {
+  const lines = [`<div class="tx-popup-title">${name} County</div>`];
+  if (res && res.total > 0) {
+    lines.push(`<div class="tx-popup-head"><span>CANDIDATE</span><span>SHARE</span></div>`);
+    ALL_IDS.map(id => ({ c: CAND_BY_ID[id], pct: res.pct[id] || 0 }))
+      .sort((a, b) => b.pct - a.pct).slice(0, 5)
+      .forEach(row => lines.push(
+        `<div class="tx-popup-row"><span class="tx-popup-name ${row.c.cls}">${row.c.name}</span><b class="${row.c.cls}">${row.pct.toFixed(1)}%</b></div>`));
+    const lead = CAND_BY_ID[res.leadId];
+    lines.push(`<div class="tx-popup-row tx-popup-margin"><span>MARGIN</span><b class="${lead.cls}">${lead.name.split(' ').slice(-1)[0]} +${res.margin.toFixed(1)}</b></div>`);
+  } else lines.push(`<div class="tx-popup-row"><span>No data</span></div>`);
+  return lines.join("");
 }
 
 function CaliforniaMap({ geojson, countyResults }) {
   const containerRef = useRef(null);
-  const mapRef = useRef(null);
-  const resultsRef = useRef(null);
-  const [mapReady, setMapReady] = useState(false);
+  const svgRef = useRef(null);
+  const tipRef = useRef(null);
+  const resultsRef = useRef(countyResults);
+  resultsRef.current = countyResults;
 
+  // build / rebuild paths when geojson or size changes
   useEffect(() => {
     const container = containerRef.current;
-    if (!container || mapRef.current || !geojson) return;
-    if (typeof maplibregl === "undefined") { console.error("MapLibre GL JS not loaded"); return; }
-    let cancelled = false;
+    if (!container || !geojson || typeof d3 === "undefined") return;
 
-    Promise.all([
-      fetch(ARCGIS_HG_BASE_STYLE).then(r => r.json()),
-      fetch(ARCGIS_HG_DETAIL_STYLE).then(r => r.json()),
-      fetch(ARCGIS_HG_LABEL_STYLE).then(r => r.json())
-    ]).then(([base, detail, label]) => {
-      if (cancelled) return;
-      const fillExpr = buildLeaderFillExpression();
-      const style = {
-        version: 8, glyphs: ARCGIS_GLYPHS_URL,
-        sources: {
-          esri: { type: "vector", tiles: [ARCGIS_TILE_URL], minzoom: 0, maxzoom: 16 },
-          counties: { type: "geojson", data: geojson }
-        },
-        layers: [
-          ...base.layers,
-          { id: "county-fill", type: "fill", source: "counties", paint: { "fill-color": fillExpr, "fill-opacity": 0.85 } },
-          { id: "county-outline", type: "line", source: "counties", paint: { "line-color": "#1a1a1a", "line-width": 0.8 } },
-          ...detail.layers,
-          ...label.layers
-        ]
-      };
-      const map = new maplibregl.Map({
-        container, style, center: [-119.4, 37.2], zoom: 4.6, minZoom: 3.5, maxZoom: 12, attributionControl: false
-      });
-      map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
-      map.addControl(new maplibregl.AttributionControl({ compact: true, customAttribution: "Esri · TomTom · Garmin · FAO · NOAA · USGS · OpenStreetMap" }));
+    const render = () => {
+      const w = container.clientWidth;
+      if (!w) return;
+      const pad = 8;
+      // size the map to California's true aspect ratio so it fills the box (no empty bands)
+      const fit = d3.geoIdentity().reflectY(true).fitWidth(w - pad * 2, geojson);
+      const [[, y0], [, y1]] = d3.geoPath(fit).bounds(geojson);
+      const hgt = Math.ceil(y1 + pad);
+      container.style.height = hgt + "px";
 
-      const popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 8, maxWidth: "260px", className: "tx-popup" });
-      const showTip = e => {
-        const ft = e.features?.[0]; if (!ft) return;
-        const name = ft.properties?.name || "?";
-        const res = resultsRef.current?.get(name);
-        const lines = [`<div class="tx-popup-title">${name} County</div>`];
-        if (res && res.total > 0) {
-          lines.push(`<div class="tx-popup-head"><span>CANDIDATE</span><span>SHARE</span></div>`);
-          ALL_IDS.map(id => ({ c: CAND_BY_ID[id], pct: res.pct[id] || 0 }))
-            .sort((a, b) => b.pct - a.pct).slice(0, 5)
-            .forEach(row => lines.push(
-              `<div class="tx-popup-row"><span class="tx-popup-name ${row.c.cls}">${row.c.name}</span><b class="${row.c.cls}">${row.pct.toFixed(1)}%</b></div>`));
-          const lead = CAND_BY_ID[res.leadId];
-          lines.push(`<div class="tx-popup-row tx-popup-margin"><span>MARGIN</span><b class="${lead.cls}">${lead.name.split(' ').slice(-1)[0]} +${res.margin.toFixed(1)}</b></div>`);
-        } else lines.push(`<div class="tx-popup-row"><span>No data</span></div>`);
-        popup.setLngLat(e.lngLat).setHTML(lines.join("")).addTo(map);
-      };
-      const hideTip = () => popup.remove();
-      map.on("mousemove", "county-fill", showTip);
-      map.on("mouseleave", "county-fill", hideTip);
-      map.on("mouseenter", "county-fill", () => map.getCanvas().style.cursor = "pointer");
-      map.on("mouseleave", "county-fill", () => map.getCanvas().style.cursor = "");
-      map.on("load", () => setMapReady(true));
-      map.on("error", ev => console.error("Map error:", ev?.error || ev));
-      mapRef.current = map;
-    }).catch(err => console.error("Map init failed:", err));
+      const svg = d3.select(svgRef.current).attr("viewBox", `0 0 ${w} ${hgt}`).attr("width", w).attr("height", hgt);
+      svg.selectAll("*").remove();
 
-    return () => { cancelled = true; if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; setMapReady(false); } };
+      const projection = d3.geoIdentity().reflectY(true).fitExtent([[pad, pad], [w - pad, hgt - pad]], geojson);
+      const path = d3.geoPath(projection);
+
+      const tip = d3.select(tipRef.current);
+      const g = svg.append("g");
+      g.selectAll("path")
+        .data(geojson.features)
+        .join("path")
+        .attr("d", path)
+        .attr("fill", ft => { const r = resultsRef.current?.get(ft.properties?.name); return r ? (HEX[r.leadId] || "#d4d4d8") : "#e3e3ea"; })
+        .attr("stroke", "#ffffff")
+        .attr("stroke-width", 0.7)
+        .attr("stroke-linejoin", "round")
+        .style("cursor", "pointer")
+        .style("transition", "opacity .12s ease")
+        .on("mousemove", function (event, ft) {
+          const name = ft.properties?.name || "?";
+          const res = resultsRef.current?.get(name);
+          tip.html(popupHTML(name, res)).style("opacity", 1);
+          const node = tipRef.current;
+          const tw = node.offsetWidth, th = node.offsetHeight;
+          const cw = container.clientWidth, ch = container.clientHeight;
+          const [mx, my] = d3.pointer(event, container);
+          let left = mx + 14;
+          if (left + tw > cw - 6) left = mx - 14 - tw;          // flip left if no room
+          left = Math.max(6, Math.min(left, cw - tw - 6));        // clamp
+          let top = my + 16;
+          if (top + th > ch - 6) top = my - 16 - th;             // flip above if no room
+          top = Math.max(6, Math.min(top, ch - th - 6));          // clamp top & bottom
+          tip.style("left", left + "px").style("top", top + "px");
+          g.selectAll("path").style("opacity", 0.32);
+          d3.select(this).style("opacity", 1).raise();
+        })
+        .on("mouseleave", function () {
+          tip.style("opacity", 0);
+          g.selectAll("path").style("opacity", 1);
+        });
+    };
+
+    render();
+    const ro = new ResizeObserver(render);
+    ro.observe(container);
+    return () => ro.disconnect();
   }, [geojson]);
 
+  // recolor in place when results change (no full rebuild)
   useEffect(() => {
-    resultsRef.current = countyResults;
-    const map = mapRef.current;
-    if (!map || !countyResults || !mapReady || !geojson) return;
-    for (const ft of geojson.features) {
-      const res = countyResults.get(ft.properties?.name);
-      if (res) map.setFeatureState({ source: "counties", id: ft.id }, { lead_id: res.leadId });
-    }
-  }, [countyResults, mapReady, geojson]);
+    if (typeof d3 === "undefined" || !svgRef.current) return;
+    d3.select(svgRef.current).selectAll("path")
+      .attr("fill", ft => { const r = countyResults?.get(ft?.properties?.name); return r ? (HEX[r.leadId] || "#d4d4d8") : "#e3e3ea"; });
+  }, [countyResults]);
 
-  return h("div", { ref: containerRef, className: "tx-map" });
+  return h("div", { ref: containerRef, className: "tx-map" },
+    h("svg", { ref: svgRef, className: "tx-map-svg" }),
+    h("div", { ref: tipRef, className: "tx-popup tx-popup-floating" }));
 }
 
 /* ──────────── UI PRIMITIVES (uploaded CSS classes) ──────────── */
