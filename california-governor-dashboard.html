@@ -391,12 +391,11 @@ function CaliforniaMap({ geojson, countyResults }) {
           if (top + th > ch - 6) top = my - 16 - th;             // flip above if no room
           top = Math.max(6, Math.min(top, ch - th - 6));          // clamp top & bottom
           tip.style("left", left + "px").style("top", top + "px");
-          g.selectAll("path").style("opacity", 0.32);
-          d3.select(this).style("opacity", 1).raise();
+          d3.select(this).attr("stroke", "#1a1a1a").attr("stroke-width", 1.6).raise();
         })
         .on("mouseleave", function () {
           tip.style("opacity", 0);
-          g.selectAll("path").style("opacity", 1);
+          d3.select(this).attr("stroke", "#ffffff").attr("stroke-width", 0.7);
         });
     };
 
