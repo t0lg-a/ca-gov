@@ -89,13 +89,10 @@ body{margin:0;background:var(--bg-base);color:var(--text-primary);font-family:va
 .tx-popup-floating{position:absolute;z-index:5;pointer-events:none;opacity:0;transition:opacity .12s ease;background:var(--bg-elevated);border:1px solid var(--menu-border);border-radius:10px;box-shadow:var(--menu-shadow);padding:.65rem .85rem;min-width:188px;max-width:210px;}
 .map-legend{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:12px;padding-top:12px;border-top:1px solid var(--stroke);}
 .county-editor{margin-top:14px;padding:0;}
-.ce-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:14px 18px 12px;border-bottom:1px solid var(--stroke);}
-.ce-title{font-family:var(--font-head);font-size:15px;font-weight:600;letter-spacing:-.01em;color:var(--text-primary);}
-.ce-status{font-size:10.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--text-muted);margin-top:3px;}
-.ce-close{flex-shrink:0;background:var(--bg-surface);border:1px solid var(--menu-border);border-radius:6px;width:24px;height:24px;cursor:pointer;color:var(--text-muted);font-size:12px;line-height:1;display:flex;align-items:center;justify-content:center;}
+.ce-sidebar-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
+.ce-close{flex-shrink:0;background:var(--bg-surface);border:1px solid var(--menu-border);border-radius:6px;width:26px;height:26px;cursor:pointer;color:var(--text-muted);font-size:12px;line-height:1;display:flex;align-items:center;justify-content:center;}
 .ce-close:hover{background:#e4e6ef;color:var(--text-primary);}
-.ce-body{padding:6px 18px 12px;}
-.ce-clear{margin:0 18px 16px;width:calc(100% - 36px);}
+.ce-card{padding:14px 18px 16px;}
 .legend-item{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--text-secondary);}
 .legend-swatch{width:11px;height:11px;border-radius:3px;flex-shrink:0;}
 .legend-name{font-weight:600;}
@@ -393,19 +390,11 @@ function CaliforniaMap({ geojson, countyResults, onSelect, selected }) {
 
       const tip = d3.select(tipRef.current);
       const g = svg.append("g");
-      // base stroke for a county: thick dark if selected, gold if overridden, else white hairline
+      // base stroke for a county: thick dark if selected, gold-ink if overridden, else white hairline
       const baseStroke = name => name === selectedRef.current ? "#1a1a1a"
         : (resultsRef.current?.get(name)?.overridden ? "#1d1810" : "#ffffff");
       const baseWidth = name => name === selectedRef.current ? 2.2
         : (resultsRef.current?.get(name)?.overridden ? 1.8 : 0.7);
-      const baseDash = name => resultsRef.current?.get(name)?.overridden ? "3 2" : null;
-      // track the highlighted node so fast moves (which skip mouseleave) can't leave it stuck
-      let hovered = null;
-      const restore = node => {
-        if (!node) return;
-        const n = node.__data__?.properties?.name;
-        d3.select(node).attr("stroke", baseStroke(n)).attr("stroke-width", baseWidth(n)).style("stroke-dasharray", baseDash(n));
-      };
       g.selectAll("path")
         .data(geo.features)
         .join("path")
@@ -415,8 +404,13 @@ function CaliforniaMap({ geojson, countyResults, onSelect, selected }) {
         .attr("stroke-width", ft => baseWidth(ft.properties?.name))
         .attr("stroke-linejoin", "round")
         .style("stroke-dasharray", ft => resultsRef.current?.get(ft.properties?.name)?.overridden ? "3 2" : null)
-        .style("cursor", "pointer")
-        .style("transition", "opacity .12s ease")
+        .style("cursor", "pointer");
+      // single hover outline drawn ABOVE every county, so highlighting never reorders
+      // the fills (the old per-path stroke+raise caused borders to overdraw = "z-fighting")
+      const hoverOutline = svg.append("path").attr("class", "hover-outline")
+        .attr("fill", "none").attr("stroke", "#1a1a1a").attr("stroke-width", 1.6)
+        .attr("stroke-linejoin", "round").style("pointer-events", "none").style("opacity", 0);
+      g.selectAll("path")
         .on("mousemove", function (event, ft) {
           const name = ft.properties?.name || "?";
           const res = resultsRef.current?.get(name);
@@ -432,14 +426,14 @@ function CaliforniaMap({ geojson, countyResults, onSelect, selected }) {
           if (top + th > ch - 6) top = my - 16 - th;             // flip above if no room
           top = Math.max(6, Math.min(top, ch - th - 6));          // clamp top & bottom
           tip.style("left", left + "px").style("top", top + "px");
-          if (hovered !== this) { restore(hovered); hovered = this; d3.select(this).attr("stroke", "#1a1a1a").attr("stroke-width", 1.6).style("stroke-dasharray", null).raise(); }
+          hoverOutline.attr("d", d3.select(this).attr("d")).style("opacity", 1).raise();
         })
         .on("click", function (event, ft) {
           event.stopPropagation();
           onSelectRef.current && onSelectRef.current(ft.properties?.name);
         });
-      // leaving the map clears the tooltip and any highlight (covers fast exits)
-      d3.select(container).on("mouseleave", () => { tip.style("opacity", 0); restore(hovered); hovered = null; });
+      // leaving the map clears the tooltip and the hover outline
+      d3.select(container).on("mouseleave", () => { tip.style("opacity", 0); hoverOutline.style("opacity", 0); });
     };
 
     render();
@@ -451,12 +445,14 @@ function CaliforniaMap({ geojson, countyResults, onSelect, selected }) {
   // recolor + restroke in place when results or selection change (no full rebuild)
   useEffect(() => {
     if (typeof d3 === "undefined" || !svgRef.current) return;
-    d3.select(svgRef.current).selectAll("path")
+    const sel = d3.select(svgRef.current).selectAll("g path")
       .attr("fill", ft => { const r = countyResults?.get(ft?.properties?.name); return r ? (HEX[r.leadId] || "#d4d4d8") : "#e3e3ea"; })
       .attr("stroke", ft => { const n = ft?.properties?.name; return n === selected ? "#1a1a1a" : (countyResults?.get(n)?.overridden ? "#1d1810" : "#ffffff"); })
       .attr("stroke-width", ft => { const n = ft?.properties?.name; return n === selected ? 2.2 : (countyResults?.get(n)?.overridden ? 1.8 : 0.7); })
-      .style("stroke-dasharray", ft => countyResults?.get(ft?.properties?.name)?.overridden ? "3 2" : null)
-      .filter(ft => ft?.properties?.name === selected).raise();
+      .style("stroke-dasharray", ft => countyResults?.get(ft?.properties?.name)?.overridden ? "3 2" : null);
+    // deterministic top order so dark borders are never overdrawn by a neighbour's fill
+    sel.filter(ft => countyResults?.get(ft?.properties?.name)?.overridden).raise();
+    sel.filter(ft => ft?.properties?.name === selected).raise();
   }, [countyResults, selected]);
 
   return h("div", { ref: containerRef, className: "tx-map" },
@@ -646,43 +642,41 @@ function CAGovernorDashboard() {
               legend.map(x => h("div", { className: "legend-item", key: x.id },
                 h("span", { className: "legend-swatch", style: { background: HEX[x.id] } }),
                 h("span", { className: "legend-name" }, CAND_BY_ID[x.id].name.split(' ').slice(-1)[0]),
-                h("span", { className: "legend-count" }, x.n))))),
+                h("span", { className: "legend-count" }, x.n)))))),
 
-          /* single-county editor — appears when a county is clicked */
-          selectedCounty && (() => {
-            const ov = countyOverrides[selectedCounty];
-            const shares = ov || countyModelPct(selectedCounty) || {};
-            return h("div", { className: "vh-card county-editor" },
-              h("div", { className: "ce-head" },
-                h("div", null,
-                  h("div", { className: "ce-title" }, `${selectedCounty} County`),
-                  h("div", { className: "ce-status" }, ov ? "Hand-set — ignoring demographics" : "Direct edit the county")),
-                h("button", { className: "ce-close", onClick: () => setSelectedCounty(null), title: "Close" }, "✕")),
-              h("div", { className: "ce-body" },
-                NAMED.map(c => h(SliderRow, {
-                  key: c.id, label: c.name,
-                  value: shares[c.id] || 0,
-                  onChange: v => setCountyShare(selectedCounty, c.id, v),
-                  max: 100, step: 0.5, suffix: '%', color: c.color
-                }))),
-              ov && h("button", { className: "reset-btn ce-clear", onClick: () => clearCountyOverride(selectedCounty) }, "Clear override (return to demographics)"));
-          })()),
-
-        /* ── RIGHT COLUMN — demographics, one card per demographic group ── */
+        /* ── RIGHT COLUMN — county editor when a county is selected, else demographics ── */
         h("div", { ref: rightColRef, className: "right-col" },
-          h("div", { className: "demo-header" },
-            h("div", { className: "demo-title" }, "Demographics"),
-            h("div", { className: "demo-sub" }, "Each candidate's share within a demographic group. Each group sums to 100%.")),
-
-          RACES.map(race => h(CollapsibleCard, { key: race.id, title: race.label, defaultOpen: true },
-            NAMED.map(c => h(SliderRow, {
-              key: c.id, label: c.name,
-              value: support[race.id][c.id] * 100,
-              onChange: v => setSup(race.id, c.id, v),
-              max: 100, step: 0.5, suffix: '%', color: c.color
-            })))),
-
-          h("button", { className: "reset-btn", onClick: resetAll }, "Reset All Levers")))));
+          selectedCounty
+            ? (() => {
+                const ov = countyOverrides[selectedCounty];
+                const shares = ov || countyModelPct(selectedCounty) || {};
+                return h(React.Fragment, null,
+                  h("div", { className: "demo-header ce-sidebar-head" },
+                    h("div", null,
+                      h("div", { className: "demo-title" }, `${selectedCounty} County`),
+                      h("div", { className: "demo-sub" }, "Margin editor")),
+                    h("button", { className: "ce-close", onClick: () => setSelectedCounty(null), title: "Close" }, "✕")),
+                  h("div", { className: "vh-card ce-card" },
+                    NAMED.map(c => h(SliderRow, {
+                      key: c.id, label: c.name,
+                      value: shares[c.id] || 0,
+                      onChange: v => setCountyShare(selectedCounty, c.id, v),
+                      max: 100, step: 0.5, suffix: '%', color: c.color
+                    }))),
+                  ov && h("button", { className: "reset-btn", onClick: () => clearCountyOverride(selectedCounty) }, "Clear override (return to demographics)"));
+              })()
+            : h(React.Fragment, null,
+                h("div", { className: "demo-header" },
+                  h("div", { className: "demo-title" }, "Demographics"),
+                  h("div", { className: "demo-sub" }, "Each candidate's share within a demographic group. Each group sums to 100%.")),
+                RACES.map(race => h(CollapsibleCard, { key: race.id, title: race.label, defaultOpen: true },
+                  NAMED.map(c => h(SliderRow, {
+                    key: c.id, label: c.name,
+                    value: support[race.id][c.id] * 100,
+                    onChange: v => setSup(race.id, c.id, v),
+                    max: 100, step: 0.5, suffix: '%', color: c.color
+                  })))),
+                h("button", { className: "reset-btn", onClick: resetAll }, "Reset All Levers"))))));
 }
 
 try {
